@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Scheduling Simulator Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f0f2f5; }
+        .gantt-block {
+            transition: all 0.3s ease;
+            min-width: 40px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+        .gantt-block:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .idle { background: #e2e8f0 !important; color: #64748b !important; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-extrabold text-slate-800 tracking-tight">CPU Scheduling <span class="text-blue-600">Simulator</span></h1>
+            <p class="text-slate-500 mt-2">Visualize and analyze process scheduling algorithms</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mr-2">1</span>
+                        Configuration
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Number of Processes</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="n" value="3" min="1" max="10" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                                <button onclick="createTable()" class="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition">Set</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Algorithm</label>
+                            <select id="algo" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                <option>FCFS</option>
+                                <option>SJF</option>
+                                <option>SRTF</option>
+                                <option>Round Robin</option>
+                                <option>Priority NP</option>
+                                <option>Priority P</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Time Quantum</label>
+                            <input type="number" id="tq" value="2" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div class="pt-4 flex gap-2">
+                            <button onclick="start()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition active:scale-95">Run Simulation</button>
+                            <button onclick="resetSim()" class="px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition">
+                                ↺
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                        <h3 class="font-semibold text-slate-700">Process Parameters</h3>
+                    </div>
+                    <div class="overflow-x-auto p-4">
+                        <table class="w-full text-sm text-left text-slate-600">
+                            <thead class="text-xs text-slate-400 uppercase bg-slate-50">
+                                <tr id="tableHeader">
+                                    <th class="px-4 py-3">Process</th>
+                                    <th class="px-4 py-3 text-center">Arrival Time</th>
+                                    <th class="px-4 py-3 text-center">Burst Time</th>
+                                    <th class="px-4 py-3 text-center">Priority</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inputTable" class="divide-y divide-slate-100">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold mb-6 flex items-center">
+                        <span class="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center mr-2">2</span>
+                        Gantt Chart
+                    </h3>
+                    <div class="overflow-x-auto pb-4 scrollbar-hide">
+                        <div id="gantt" class="flex items-center min-w-max"></div>
+                        <div id="timeline" class="flex items-center min-w-max text-xs text-slate-400 mt-2"></div>
+                    </div>
+                </div>
+
+                <div id="resultContainer" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-blue-50/30">
+                        <h3 class="font-semibold text-blue-900">Analysis Results</h3>
+                    </div>
+                    <div class="overflow-x-auto p-4">
+                        <table id="result" class="w-full text-sm text-left">
+                            </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+<script>
+// Colors for processes
+const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899'];
+
+function createTable(){
+    let n = document.getElementById("n").value;
+    let table = "";
+    for(let i=0; i<n; i++){
+        table += `
+        <tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-3 font-bold text-slate-700">P${i+1}</td>
+            <td class="px-4 py-3"><input type="number" id="at${i}" value="${i}" class="w-20 mx-auto block px-2 py-1 border rounded text-center"></td>
+            <td class="px-4 py-3"><input type="number" id="bt${i}" value="3" class="w-20 mx-auto block px-2 py-1 border rounded text-center"></td>
+            <td class="px-4 py-3"><input type="number" id="pr${i}" value="1" class="w-20 mx-auto block px-2 py-1 border rounded text-center"></td>
+        </tr>`;
+    }
+    document.getElementById("inputTable").innerHTML = table;
+}
+createTable();
+
+function getProcesses(){
+    let n = document.getElementById("n").value;
+    let p = [];
+    for(let i=0; i<n; i++){
+        p.push({
+            id: "P"+(i+1),
+            idx: i,
+            at: parseInt(document.getElementById("at"+i).value),
+            bt: parseInt(document.getElementById("bt"+i).value),
+            rt: parseInt(document.getElementById("bt"+i).value),
+            pr: parseInt(document.getElementById("pr"+i).value),
+            ct: 0
+        });
+    }
+    return p;
+}
+
+function start(){
+    document.getElementById("resultContainer").classList.remove('hidden');
+    let algo = document.getElementById("algo").value;
+    let p = getProcesses();
+    if(algo=="FCFS") fcfs(p);
+    if(algo=="SJF") sjf(p);
+    if(algo=="SRTF") srtf(p);
+    if(algo=="Round Robin") rr(p);
+    if(algo=="Priority NP") priority_np(p);
+    if(algo=="Priority P") priority_p(p);
+}
+
+function draw(gantt){
+    let g = document.getElementById("gantt");
+    let t = document.getElementById("timeline");
+    g.innerHTML = "";
+    t.innerHTML = "";
+
+    gantt.forEach((proc, i) => {
+        let b = document.createElement("div");
+        b.className = "gantt-block " + (proc === "Idle" ? "idle" : "");
+        if(proc !== "Idle") {
+            let pid = parseInt(proc.substring(1)) - 1;
+            b.style.backgroundColor = colors[pid % colors.length];
+            b.style.color = "white";
+        }
+        b.innerText = proc;
+        g.appendChild(b);
+
+        let time = document.createElement("span");
+        time.className = "text-center";
+        time.style.width = "40px";
+        time.innerText = i;
+        t.appendChild(time);
+        
+        if(i === gantt.length - 1) {
+            let lastTime = document.createElement("span");
+            lastTime.className = "text-center";
+            lastTime.style.width = "40px";
+            lastTime.innerText = i + 1;
+            t.appendChild(lastTime);
+        }
+    });
+}
+
+function results(p){
+    let table = `
+    <thead class="text-xs text-slate-500 uppercase">
+        <tr>
+            <th class="px-4 py-2">Process</th>
+            <th class="px-4 py-2">Arrival</th>
+            <th class="px-4 py-2">Burst</th>
+            <th class="px-4 py-2">Completion</th>
+            <th class="px-4 py-2">Turnaround</th>
+            <th class="px-4 py-2">Waiting</th>
+        </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">`;
+
+    let awt = 0, atat = 0;
+    p.forEach(x => {
+        let tat = x.ct - x.at;
+        let wt = tat - x.bt;
+        awt += wt; atat += tat;
+        table += `
+        <tr>
+            <td class="px-4 py-3 font-semibold text-slate-700">${x.id}</td>
+            <td class="px-4 py-3">${x.at}</td>
+            <td class="px-4 py-3">${x.bt}</td>
+            <td class="px-4 py-3 font-medium text-blue-600">${x.ct}</td>
+            <td class="px-4 py-3">${tat}</td>
+            <td class="px-4 py-3">${wt}</td>
+        </tr>`;
+    });
+
+    table += `</tbody>
+    <tfoot class="bg-slate-50 font-bold">
+        <tr>
+            <td colspan="4" class="px-4 py-3 text-right">Average Metrics:</td>
+            <td class="px-4 py-3 text-blue-600">${(atat/p.length).toFixed(2)}</td>
+            <td class="px-4 py-3 text-blue-600">${(awt/p.length).toFixed(2)}</td>
+        </tr>
+    </tfoot>`;
+    document.getElementById("result").innerHTML = table;
+}
+
+// Keep your existing logic functions (fcfs, sjf, srtf, rr, priority_np, priority_p) 
+// but ensure they call the new draw() and results()
+function fcfs(p){ p.sort((a,b)=>a.at-b.at); let time=0, gantt=[]; for(let x of p){ if(time<x.at){ while(time<x.at){ gantt.push("Idle"); time++; } } for(let i=0;i<x.bt;i++){ gantt.push(x.id); time++; } x.ct=time; } draw(gantt); results(p); }
+function sjf(p){ let time=0, done=0, gantt=[]; while(done<p.length){ let available=p.filter(x=>x.at<=time && x.ct==0); if(available.length==0){ gantt.push("Idle"); time++; continue; } available.sort((a,b)=>a.bt-b.bt); let job=available[0]; for(let i=0;i<job.bt;i++){ gantt.push(job.id); time++; } job.ct=time; done++; } draw(gantt); results(p); }
+function srtf(p){ let time=0, done=0, gantt=[]; while(done<p.length){ let available=p.filter(x=>x.at<=time && x.rt>0); if(available.length==0){ gantt.push("Idle"); time++; continue; } available.sort((a,b)=>a.rt-b.rt); let job=available[0]; gantt.push(job.id); job.rt--; time++; if(job.rt==0){ job.ct=time; done++; } } draw(gantt); results(p); }
+function rr(p){ let tq=parseInt(document.getElementById("tq").value), time=0, gantt=[], done=false; while(!done){ done=true; for(let x of p){ if(x.rt>0 && x.at<=time){ done=false; let run=Math.min(tq,x.rt); for(let i=0;i<run;i++){ gantt.push(x.id); time++; } x.rt-=run; if(x.rt==0) x.ct=time; } } if(done && p.some(x=>x.rt>0)) { gantt.push("Idle"); time++; done=false; } } draw(gantt); results(p); }
+function priority_np(p){ let time=0, done=0, gantt=[]; while(done<p.length){ let available=p.filter(x=>x.at<=time && x.ct==0); if(available.length==0){ gantt.push("Idle"); time++; continue; } available.sort((a,b)=>a.pr-b.pr); let job=available[0]; for(let i=0;i<job.bt;i++){ gantt.push(job.id); time++; } job.ct=time; done++; } draw(gantt); results(p); }
+function priority_p(p){ let time=0, done=0, gantt=[]; while(done<p.length){ let available=p.filter(x=>x.at<=time && x.rt>0); if(available.length==0){ gantt.push("Idle"); time++; continue; } available.sort((a,b)=>a.pr-b.pr); let job=available[0]; gantt.push(job.id); job.rt--; time++; if(job.rt==0){ job.ct=time; done++; } } draw(gantt); results(p); }
+
+function resetSim(){
+    document.getElementById("gantt").innerHTML = "";
+    document.getElementById("timeline").innerHTML = "";
+    document.getElementById("result").innerHTML = "";
+    document.getElementById("resultContainer").classList.add('hidden');
+}
+</script>
+</body>
+</html>

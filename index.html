@@ -3,260 +3,657 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CPU Scheduling Simulator Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>CPU Scheduling Simulator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background: #f0f2f5; }
-        .gantt-block {
-            transition: all 0.3s ease;
-            min-width: 40px;
-            height: 50px;
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface2: #1a1a26;
+            --border: #2a2a3d;
+            --accent: #6c63ff;
+            --accent2: #ff6584;
+            --accent3: #43e8a0;
+            --text: #e8e8f0;
+            --muted: #6b6b8a;
+            --font-mono: 'Space Mono', monospace;
+            --font-body: 'DM Sans', sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            padding: 2rem;
+            background-image:
+                radial-gradient(ellipse at 10% 20%, rgba(108,99,255,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 90% 80%, rgba(67,232,160,0.05) 0%, transparent 50%);
+        }
+
+        /* Header */
+        header { text-align: center; margin-bottom: 3rem; }
+        .badge { display: inline-block; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.15em; color: var(--accent3); border: 1px solid rgba(67,232,160,0.3); padding: 4px 14px; border-radius: 99px; margin-bottom: 1rem; }
+        header h1 { font-family: var(--font-mono); font-size: clamp(1.8rem,4vw,3rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+        header h1 span { color: var(--accent); }
+        header p { color: var(--muted); margin-top: 0.6rem; font-weight: 300; font-size: 0.95rem; }
+
+        /* Layout */
+        .layout { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; align-items: start; }
+        @media(max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+
+        /* Cards */
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+        .card-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.6rem; }
+        .card-header .step { width: 24px; height: 24px; border-radius: 6px; background: var(--accent); color: #fff; font-family: var(--font-mono); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .card-header h3 { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+        .card-body { padding: 1.25rem; }
+
+        /* Form */
+        .field { margin-bottom: 1rem; }
+        .field label { display: block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; color: var(--muted); text-transform: uppercase; margin-bottom: 0.4rem; }
+        input[type="number"], select { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 0.55rem 0.75rem; font-family: var(--font-body); font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+        input[type="number"]:focus, select:focus { border-color: var(--accent); }
+        select option { background: var(--surface2); }
+        .field-row { display: flex; gap: 0.5rem; }
+        .field-row input { flex: 1; }
+        .field-row button { padding: 0.55rem 0.9rem; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: border-color 0.2s, background 0.2s; }
+        .field-row button:hover { border-color: var(--accent); background: rgba(108,99,255,0.1); }
+        #tqField { transition: opacity 0.25s, max-height 0.3s; overflow: hidden; max-height: 80px; }
+        #tqField.hidden { opacity: 0; max-height: 0; pointer-events: none; margin: 0; }
+
+        .btn-run { width: 100%; padding: 0.8rem; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.05em; cursor: pointer; transition: opacity 0.2s, transform 0.1s; margin-top: 0.5rem; }
+        .btn-run:hover:not(:disabled) { opacity: 0.9; }
+        .btn-run:active:not(:disabled) { transform: scale(0.98); }
+        .btn-run:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn-reset { width: 100%; margin-top: 0.5rem; padding: 0.6rem; background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 10px; font-size: 0.82rem; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+        .btn-reset:hover { color: var(--accent2); border-color: var(--accent2); }
+
+        /* Speed */
+        .speed-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+        .speed-row label { font-size: 0.7rem; color: var(--muted); white-space: nowrap; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
+        input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+        #speedVal { font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent3); min-width: 28px; text-align: right; }
+
+        /* Process table */
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        thead th { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; padding: 0.6rem 0.75rem; text-align: center; border-bottom: 1px solid var(--border); }
+        thead th:first-child { text-align: left; }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: var(--surface2); }
+        tbody td { padding: 0.5rem 0.75rem; text-align: center; }
+        tbody td:first-child { text-align: left; font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; }
+        tbody td input { width: 64px; padding: 0.35rem 0.5rem; font-size: 0.85rem; text-align: center; border-radius: 6px; }
+
+        /* ── Live Gantt ── */
+        #ganttWrap { overflow-x: auto; padding-bottom: 0.5rem; }
+        #gantt { display: flex; align-items: stretch; gap: 2px; }
+
+        .g-block {
+            /* width set strictly via JS — no min-width override here */
+            height: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            border-right: 1px solid rgba(255,255,255,0.2);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 6px;
+            flex-shrink: 0;
+            opacity: 0;
+            transform: translateY(12px) scale(0.88);
+            transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+            cursor: default;
+            user-select: none;
+            overflow: hidden;
+            white-space: nowrap;
         }
-        .gantt-block:hover { transform: translateY(-2px); filter: brightness(1.1); }
-        .idle { background: #e2e8f0 !important; color: #64748b !important; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .g-block.pop { opacity: 1; transform: translateY(0) scale(1); }
+        .g-block.current {
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 0 20px 4px rgba(255,255,255,0.15);
+            z-index: 2;
+            position: relative;
+        }
+        .g-block:hover { transform: translateY(-2px) scale(1) !important; }
+        .g-idle { background: var(--surface2) !important; color: var(--muted) !important; border: 1px dashed var(--border); }
+
+        /* Timeline is a relative-positioned ruler; labels are absolute ticks */
+        #timeline { position: relative; margin-top: 8px; height: 18px; }
+        .t-label {
+            position: absolute;
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            color: var(--muted);
+            transform: translateX(-50%);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .t-label.pop { opacity: 1; }
+
+        /* Live status strip */
+        #liveStatus {
+            display: none;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.9rem;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+        }
+        .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent3); flex-shrink: 0; animation: liveBlink 0.65s step-end infinite; }
+        @keyframes liveBlink { 0%,100%{opacity:1} 50%{opacity:0.1} }
+        #liveText { color: var(--accent3); }
+        #liveTime { margin-left: auto; color: var(--muted); }
+
+        /* Algo tag */
+        .algo-tag { display: inline-block; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 4px; margin-left: 0.5rem; }
+        .tag-preemptive { background: rgba(255,101,132,0.15); color: var(--accent2); }
+        .tag-nonpreemptive { background: rgba(67,232,160,0.12); color: var(--accent3); }
+
+        /* Results */
+        #resultContainer { display: none; }
+        #result thead th { color: var(--muted); }
+        #result tbody td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
+        #result tbody td:first-child { font-family: var(--font-mono); font-weight: 700; }
+        .ct-val { color: var(--accent); font-weight: 600; }
+        tfoot td { padding: 0.6rem 0.75rem; font-size: 0.8rem; color: var(--muted); }
+        .avg-val { color: var(--accent3); font-weight: 700; font-family: var(--font-mono); }
+
+        /* Toast */
+        #toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface); border: 1px solid var(--accent3); color: var(--accent3); font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; padding: 0.6rem 1.4rem; border-radius: 99px; z-index: 1000; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s; opacity: 0; pointer-events: none; }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        ::-webkit-scrollbar { height: 4px; width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--surface); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body>
 
-    <div class="max-w-6xl mx-auto">
-        <header class="mb-8 text-center">
-            <h1 class="text-4xl font-extrabold text-slate-800 tracking-tight">CPU Scheduling <span class="text-blue-600">Simulator</span></h1>
-            <p class="text-slate-500 mt-2">Visualize and analyze process scheduling algorithms</p>
-        </header>
+<div id="toast"></div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <div class="lg:col-span-1 space-y-6">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 class="text-lg font-semibold mb-4 flex items-center">
-                        <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mr-2">1</span>
-                        Configuration
-                    </h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Number of Processes</label>
-                            <div class="flex gap-2">
-                                <input type="number" id="n" value="3" min="1" max="10" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
-                                <button onclick="createTable()" class="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition">Set</button>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Algorithm</label>
-                            <select id="algo" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                                <option>FCFS</option>
-                                <option>SJF</option>
-                                <option>SRTF</option>
-                                <option>Round Robin</option>
-                                <option>Priority NP</option>
-                                <option>Priority P</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Time Quantum</label>
-                            <input type="number" id="tq" value="2" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                        </div>
-                        <div class="pt-4 flex gap-2">
-                            <button onclick="start()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition active:scale-95">Run Simulation</button>
-                            <button onclick="resetSim()" class="px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition">
-                                ↺
-                            </button>
-                        </div>
-                    </div>
-                </div>
+<header>
+    <div class="badge">↯ OS Simulator v2.0</div>
+    <h1>CPU <span>Scheduling</span><br>Simulator</h1>
+    <p>Visualize preemptive &amp; non-preemptive algorithms in real time</p>
+</header>
+
+<div class="layout">
+
+    <!-- LEFT -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <div class="card">
+            <div class="card-header">
+                <span class="step">1</span>
+                <h3>Configuration</h3>
             </div>
-
-            <div class="lg:col-span-2 space-y-6">
-                
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                        <h3 class="font-semibold text-slate-700">Process Parameters</h3>
-                    </div>
-                    <div class="overflow-x-auto p-4">
-                        <table class="w-full text-sm text-left text-slate-600">
-                            <thead class="text-xs text-slate-400 uppercase bg-slate-50">
-                                <tr id="tableHeader">
-                                    <th class="px-4 py-3">Process</th>
-                                    <th class="px-4 py-3 text-center">Arrival Time</th>
-                                    <th class="px-4 py-3 text-center">Burst Time</th>
-                                    <th class="px-4 py-3 text-center">Priority</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inputTable" class="divide-y divide-slate-100">
-                                </tbody>
-                        </table>
+            <div class="card-body">
+                <div class="field">
+                    <label>Processes</label>
+                    <div class="field-row">
+                        <input type="number" id="n" value="4" min="1" max="10">
+                        <button onclick="createTable()">Set</button>
                     </div>
                 </div>
-
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                    <h3 class="text-lg font-semibold mb-6 flex items-center">
-                        <span class="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center mr-2">2</span>
-                        Gantt Chart
-                    </h3>
-                    <div class="overflow-x-auto pb-4 scrollbar-hide">
-                        <div id="gantt" class="flex items-center min-w-max"></div>
-                        <div id="timeline" class="flex items-center min-w-max text-xs text-slate-400 mt-2"></div>
-                    </div>
+                <div class="field">
+                    <label>Algorithm</label>
+                    <select id="algo" onchange="toggleTQ()">
+                        <option>FCFS</option>
+                        <option>SJF</option>
+                        <option>SRTF</option>
+                        <option>Round Robin</option>
+                        <option>Priority NP</option>
+                        <option>Priority P</option>
+                    </select>
+                    <div id="algoMeta" style="margin-top:0.4rem;"></div>
                 </div>
-
-                <div id="resultContainer" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-100 bg-blue-50/30">
-                        <h3 class="font-semibold text-blue-900">Analysis Results</h3>
-                    </div>
-                    <div class="overflow-x-auto p-4">
-                        <table id="result" class="w-full text-sm text-left">
-                            </table>
-                    </div>
+                <div class="field" id="tqField">
+                    <label>Time Quantum</label>
+                    <input type="number" id="tq" value="2" min="1">
                 </div>
+                <div class="speed-row">
+                    <label>Speed</label>
+                    <input type="range" id="speedSlider" min="1" max="5" value="2" oninput="updateSpeed()">
+                    <span id="speedVal">2×</span>
+                </div>
+                <button class="btn-run" id="btnRun" onclick="start()">▶ Run Simulation</button>
+                <button class="btn-reset" onclick="resetSim()">↺ Reset</button>
+            </div>
+        </div>
 
+        <div class="card">
+            <div class="card-header"><h3 style="margin-left:0;">Algorithm Info</h3></div>
+            <div class="card-body" style="font-size:0.78rem;line-height:1.7;color:var(--muted);">
+                <div id="algoDesc">Select an algorithm to see its description.</div>
             </div>
         </div>
     </div>
 
+    <!-- RIGHT -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+        <div class="card">
+            <div class="card-header">
+                <span class="step">2</span>
+                <h3>Process Parameters</h3>
+            </div>
+            <div style="overflow-x:auto;padding:0.5rem 0;">
+                <table>
+                    <thead><tr>
+                        <th style="text-align:left;padding-left:1.25rem;">PID</th>
+                        <th>Arrival</th><th>Burst</th><th>Priority</th>
+                    </tr></thead>
+                    <tbody id="inputTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="step" style="background:var(--accent3);color:#0a0a0f;">3</span>
+                <h3>Gantt Chart</h3>
+            </div>
+            <div class="card-body">
+                <div id="liveStatus">
+                    <div class="live-dot"></div>
+                    <span id="liveText">Running…</span>
+                    <span id="liveTime">t = 0</span>
+                </div>
+                <div id="ganttWrap" style="overflow-x:auto; padding-bottom:0.5rem;">
+                    <div id="ganttInner" style="display:inline-block; min-width:100%;">
+                        <div id="gantt" style="display:flex; gap:2px;"></div>
+                        <div id="timeline"></div>
+                    </div>
+                </div>
+                <div id="ganttEmpty" style="color:var(--muted);font-size:0.82rem;text-align:center;padding:1.5rem 0;">
+                    Run a simulation to see the live Gantt chart
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="resultContainer">
+            <div class="card-header">
+                <span class="step" style="background:var(--accent2);">4</span>
+                <h3>Analysis Results</h3>
+            </div>
+            <div style="overflow-x:auto;">
+                <table id="result"></table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
 <script>
-// Colors for processes
-const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899'];
+const COLORS = ['#6c63ff','#43e8a0','#ff6584','#f9c74f','#4cc9f0','#f77f00','#a8dadc','#e76f51'];
 
-function createTable(){
-    let n = document.getElementById("n").value;
-    let table = "";
-    for(let i=0; i<n; i++){
-        table += `
-        <tr class="hover:bg-slate-50 transition">
-            <td class="px-4 py-3 font-bold text-slate-700">P${i+1}</td>
-            <td class="px-4 py-3"><input type="number" id="at${i}" value="${i}" class="w-20 mx-auto block px-2 py-1 border rounded text-center"></td>
-            <td class="px-4 py-3"><input type="number" id="bt${i}" value="3" class="w-20 mx-auto block px-2 py-1 border rounded text-center"></td>
-            <td class="px-4 py-3"><input type="number" id="pr${i}" value="1" class="w-20 mx-auto block px-2 py-1 border rounded text-center"></td>
+const ALGO_INFO = {
+    'FCFS':        { type:'non-preemptive', desc:'<b>First Come First Served</b> — Processes execute in arrival order. Simple but can cause the convoy effect.' },
+    'SJF':         { type:'non-preemptive', desc:'<b>Shortest Job First</b> (NP) — Picks the shortest burst from the ready queue. Minimizes average wait but may starve long processes.' },
+    'SRTF':        { type:'preemptive',     desc:'<b>Shortest Remaining Time First</b> — Preempts the running process whenever a shorter one arrives.' },
+    'Round Robin': { type:'preemptive',     desc:'<b>Round Robin</b> — Each process gets a fixed <em>time quantum</em> in cyclic order. Fair and responsive.' },
+    'Priority NP': { type:'non-preemptive', desc:'<b>Priority Scheduling</b> (NP) — Highest priority (lowest number) runs to completion. Can starve low-priority processes.' },
+    'Priority P':  { type:'preemptive',     desc:'<b>Priority Scheduling</b> (P) — A higher-priority arrival immediately preempts the current process.' }
+};
+
+// Speed level → ms per time unit
+const SPEED_MS = [700, 380, 180, 80, 25];
+
+function getDelay() { return SPEED_MS[parseInt(document.getElementById('speedSlider').value) - 1]; }
+function updateSpeed() { document.getElementById('speedVal').textContent = document.getElementById('speedSlider').value + '×'; }
+
+function toggleTQ() {
+    const algo = document.getElementById('algo').value;
+    document.getElementById('tqField').classList.toggle('hidden', algo !== 'Round Robin');
+    const info = ALGO_INFO[algo];
+    if (!info) return;
+    const tc = info.type === 'preemptive' ? 'tag-preemptive' : 'tag-nonpreemptive';
+    document.getElementById('algoMeta').innerHTML = `<span class="algo-tag ${tc}">${info.type}</span>`;
+    document.getElementById('algoDesc').innerHTML = info.desc;
+}
+
+function createTable() {
+    const n = parseInt(document.getElementById('n').value);
+    const dAT = [0,2,4,9], dBT = [6,2,4,3], dPR = [3,1,4,2];
+    let rows = '';
+    for (let i = 0; i < n; i++) {
+        const c = COLORS[i % COLORS.length];
+        rows += `<tr>
+            <td style="color:${c};padding-left:1.25rem;">P${i+1}</td>
+            <td><input type="number" id="at${i}" value="${dAT[i]??i*3}" min="0"></td>
+            <td><input type="number" id="bt${i}" value="${dBT[i]??3}" min="1"></td>
+            <td><input type="number" id="pr${i}" value="${dPR[i]??i+1}" min="1"></td>
         </tr>`;
     }
-    document.getElementById("inputTable").innerHTML = table;
+    document.getElementById('inputTable').innerHTML = rows;
 }
-createTable();
 
-function getProcesses(){
-    let n = document.getElementById("n").value;
-    let p = [];
-    for(let i=0; i<n; i++){
-        p.push({
-            id: "P"+(i+1),
-            idx: i,
-            at: parseInt(document.getElementById("at"+i).value),
-            bt: parseInt(document.getElementById("bt"+i).value),
-            rt: parseInt(document.getElementById("bt"+i).value),
-            pr: parseInt(document.getElementById("pr"+i).value),
-            ct: 0
-        });
+function getProcesses() {
+    const n = parseInt(document.getElementById('n').value);
+    return Array.from({length:n}, (_,i) => ({
+        id:`P${i+1}`, idx:i,
+        at: +document.getElementById(`at${i}`).value,
+        bt: +document.getElementById(`bt${i}`).value,
+        rt: +document.getElementById(`bt${i}`).value,
+        pr: +document.getElementById(`pr${i}`).value,
+        ct: 0
+    }));
+}
+
+// ── Scheduling algorithms — each returns a gantt array ──
+
+function fcfs(p) {
+    p.sort((a,b)=>a.at-b.at);
+    let t=0, g=[];
+    for (let x of p) {
+        while(t<x.at){g.push("Idle");t++;}
+        for(let i=0;i<x.bt;i++){g.push(x.id);t++;}
+        x.ct=t;
     }
-    return p;
+    return g;
 }
 
-function start(){
-    document.getElementById("resultContainer").classList.remove('hidden');
-    let algo = document.getElementById("algo").value;
-    let p = getProcesses();
-    if(algo=="FCFS") fcfs(p);
-    if(algo=="SJF") sjf(p);
-    if(algo=="SRTF") srtf(p);
-    if(algo=="Round Robin") rr(p);
-    if(algo=="Priority NP") priority_np(p);
-    if(algo=="Priority P") priority_p(p);
+function sjf(p) {
+    let t=0,done=0,g=[];
+    while(done<p.length){
+        let av=p.filter(x=>x.at<=t&&x.ct===0);
+        if(!av.length){g.push("Idle");t++;continue;}
+        av.sort((a,b)=>a.bt-b.bt);
+        let job=av[0];
+        for(let i=0;i<job.bt;i++){g.push(job.id);t++;}
+        job.ct=t;done++;
+    }
+    return g;
 }
 
-function draw(gantt){
-    let g = document.getElementById("gantt");
-    let t = document.getElementById("timeline");
-    g.innerHTML = "";
-    t.innerHTML = "";
+function srtf(p) {
+    let t=0,done=0,g=[];
+    while(done<p.length){
+        let av=p.filter(x=>x.at<=t&&x.rt>0);
+        if(!av.length){g.push("Idle");t++;continue;}
+        av.sort((a,b)=>a.rt-b.rt);
+        let job=av[0];
+        g.push(job.id);job.rt--;t++;
+        if(job.rt===0){job.ct=t;done++;}
+    }
+    return g;
+}
 
-    gantt.forEach((proc, i) => {
-        let b = document.createElement("div");
-        b.className = "gantt-block " + (proc === "Idle" ? "idle" : "");
-        if(proc !== "Idle") {
-            let pid = parseInt(proc.substring(1)) - 1;
-            b.style.backgroundColor = colors[pid % colors.length];
-            b.style.color = "white";
+function rr(p) {
+    const tq=+document.getElementById('tq').value;
+    let t=0,g=[],queue=[],arr=p.map(x=>({...x}));
+    arr.sort((a,b)=>a.at-b.at);
+    let idx=0;
+    while(idx<arr.length&&arr[idx].at<=t) queue.push(arr[idx++]);
+    let safe=0;
+    while(queue.length||idx<arr.length){
+        if(!queue.length){
+            g.push("Idle");t++;
+            while(idx<arr.length&&arr[idx].at<=t) queue.push(arr[idx++]);
+            continue;
         }
-        b.innerText = proc;
-        g.appendChild(b);
+        let job=queue.shift();
+        let run=Math.min(tq,job.rt);
+        for(let i=0;i<run;i++){g.push(job.id);t++;}
+        job.rt-=run;
+        while(idx<arr.length&&arr[idx].at<=t) queue.push(arr[idx++]);
+        if(job.rt>0) queue.push(job);
+        else p.find(x=>x.id===job.id).ct=t;
+        if(++safe>10000) break;
+    }
+    return g;
+}
 
-        let time = document.createElement("span");
-        time.className = "text-center";
-        time.style.width = "40px";
-        time.innerText = i;
-        t.appendChild(time);
-        
-        if(i === gantt.length - 1) {
-            let lastTime = document.createElement("span");
-            lastTime.className = "text-center";
-            lastTime.style.width = "40px";
-            lastTime.innerText = i + 1;
-            t.appendChild(lastTime);
-        }
+function priority_np(p) {
+    let t=0,done=0,g=[];
+    while(done<p.length){
+        let av=p.filter(x=>x.at<=t&&x.ct===0);
+        if(!av.length){g.push("Idle");t++;continue;}
+        av.sort((a,b)=>a.pr-b.pr);
+        let job=av[0];
+        for(let i=0;i<job.bt;i++){g.push(job.id);t++;}
+        job.ct=t;done++;
+    }
+    return g;
+}
+
+function priority_p(p) {
+    let t=0,done=0,g=[];
+    while(done<p.length){
+        let av=p.filter(x=>x.at<=t&&x.rt>0);
+        if(!av.length){g.push("Idle");t++;continue;}
+        av.sort((a,b)=>a.pr-b.pr);
+        let job=av[0];
+        g.push(job.id);job.rt--;t++;
+        if(job.rt===0){job.ct=t;done++;}
+    }
+    return g;
+}
+
+// ── Compress consecutive identical slots ──
+function compress(gantt) {
+    const out=[];
+    gantt.forEach(id=>{
+        if(out.length&&out[out.length-1].id===id) out[out.length-1].len++;
+        else out.push({id,len:1});
     });
+    return out;
 }
 
-function results(p){
-    let table = `
-    <thead class="text-xs text-slate-500 uppercase">
-        <tr>
-            <th class="px-4 py-2">Process</th>
-            <th class="px-4 py-2">Arrival</th>
-            <th class="px-4 py-2">Burst</th>
-            <th class="px-4 py-2">Completion</th>
-            <th class="px-4 py-2">Turnaround</th>
-            <th class="px-4 py-2">Waiting</th>
-        </tr>
-    </thead>
-    <tbody class="divide-y divide-slate-100">`;
+// ── Live animation ──
+let animTimer = null;
+const PX = 36; // pixels per time unit — strict, no min-width override
 
-    let awt = 0, atat = 0;
-    p.forEach(x => {
-        let tat = x.ct - x.at;
-        let wt = tat - x.bt;
+function animateGantt(segments, onDone) {
+    const gEl = document.getElementById('gantt');
+    const tEl = document.getElementById('timeline');
+    const statusEl = document.getElementById('liveStatus');
+    const liveText = document.getElementById('liveText');
+    const liveTime = document.getElementById('liveTime');
+    const dot = document.querySelector('.live-dot');
+
+    gEl.innerHTML = '';
+    tEl.innerHTML = '';
+    document.getElementById('ganttEmpty').style.display = 'none';
+    statusEl.style.display = 'flex';
+    dot.style.animation = 'liveBlink 0.65s step-end infinite';
+    dot.style.background = 'var(--accent3)';
+
+    // Total width = total time units * PX
+    const totalUnits = segments.reduce((s, seg) => s + seg.len, 0);
+    const totalW = totalUnits * PX;
+
+    // ── Gantt row: one block per segment, width strictly = len * PX ──
+    gEl.style.width = totalW + 'px';
+    let timeAcc = 0;
+    segments.forEach((seg) => {
+        const w = seg.len * PX;
+        const b = document.createElement('div');
+        b.className = 'g-block' + (seg.id === 'Idle' ? ' g-idle' : '');
+        // Override CSS min-width entirely — width is exact
+        b.style.cssText = `width:${w}px; min-width:${w}px; max-width:${w}px;`;
+        if (seg.id !== 'Idle') {
+            const pidx = parseInt(seg.id.substring(1)) - 1;
+            b.style.background = COLORS[pidx % COLORS.length];
+            b.style.color = '#0a0a0f';
+        }
+        b.title = `${seg.id}  [ t=${timeAcc} → ${timeAcc+seg.len} ]`;
+        b.textContent = seg.id;
+        b.dataset.t0 = timeAcc;
+        b.dataset.t1 = timeAcc + seg.len;
+        gEl.appendChild(b);
+        timeAcc += seg.len;
+    });
+
+    // ── Timeline row: tick marks at every boundary, positioned absolutely ──
+    // Use a relative container so ticks sit exactly at block edges
+    tEl.style.position = 'relative';
+    tEl.style.width = totalW + 'px';
+    tEl.style.height = '20px';
+
+    // Collect all unique boundary times
+    const boundaries = [];
+    let t = 0;
+    segments.forEach(seg => { boundaries.push(t); t += seg.len; });
+    boundaries.push(t); // final end time
+
+    // Decide which labels to show to avoid crowding (show every N)
+    const minGapPx = 28;
+    const step = Math.ceil(minGapPx / PX);
+
+    boundaries.forEach((bt, i) => {
+        // Always show first and last; others only if spaced enough
+        if (i !== 0 && i !== boundaries.length - 1 && bt % step !== 0) return;
+        const lbl = document.createElement('div');
+        lbl.className = 't-label';
+        lbl.style.cssText = `position:absolute; left:${bt * PX}px; transform:translateX(-50%); width:auto; min-width:0;`;
+        lbl.textContent = bt;
+        lbl.dataset.boundary = bt;
+        tEl.appendChild(lbl);
+    });
+
+    const blocks = Array.from(gEl.querySelectorAll('.g-block'));
+    // Labels keyed by boundary time for easy lookup
+    const labelMap = {};
+    tEl.querySelectorAll('.t-label').forEach(l => { labelMap[l.dataset.boundary] = l; });
+    let idx = 0;
+
+    function tick() {
+        if (idx > 0) blocks[idx-1].classList.remove('current');
+
+        if (idx >= blocks.length) {
+            // Reveal final time label
+            const finalLbl = labelMap[totalUnits];
+            if (finalLbl) finalLbl.classList.add('pop');
+            liveText.textContent = '✓ Complete';
+            liveTime.textContent = `Total: ${totalUnits} units`;
+            dot.style.animation = 'none';
+            dot.style.background = 'var(--accent3)';
+            setTimeout(() => { statusEl.style.display = 'none'; }, 2200);
+            if (onDone) onDone();
+            return;
+        }
+
+        const b = blocks[idx];
+        const t0 = +b.dataset.t0, t1 = +b.dataset.t1;
+
+        b.classList.add('pop');
+        b.classList.add('current');
+
+        // Reveal the start-boundary label for this block
+        const startLbl = labelMap[t0];
+        if (startLbl) startLbl.classList.add('pop');
+
+        // Update live status
+        const label = b.textContent === 'Idle' ? '⏸  Idle' : '⚡ ' + b.textContent;
+        liveText.textContent = label;
+        liveTime.textContent = `t = ${t0} → ${t1}`;
+
+        // Auto-scroll to keep active block visible
+        const wrap = document.getElementById('ganttWrap');
+        const inner = document.getElementById('ganttInner');
+        const bRight = b.offsetLeft + b.offsetWidth;
+        if (bRight > wrap.scrollLeft + wrap.clientWidth - 20) {
+            wrap.scrollLeft = bRight - wrap.clientWidth + 80;
+        }
+
+        idx++;
+        animTimer = setTimeout(tick, getDelay() * segments[idx-1].len);
+    }
+
+    tick();
+}
+
+function results(p) {
+    document.getElementById('resultContainer').style.display = 'block';
+    let awt=0, atat=0;
+    const rows = p.map(x => {
+        const tat = x.ct - x.at;
+        const wt  = tat - x.bt;
         awt += wt; atat += tat;
-        table += `
-        <tr>
-            <td class="px-4 py-3 font-semibold text-slate-700">${x.id}</td>
-            <td class="px-4 py-3">${x.at}</td>
-            <td class="px-4 py-3">${x.bt}</td>
-            <td class="px-4 py-3 font-medium text-blue-600">${x.ct}</td>
-            <td class="px-4 py-3">${tat}</td>
-            <td class="px-4 py-3">${wt}</td>
+        const c = COLORS[x.idx % COLORS.length];
+        return `<tr>
+            <td style="color:${c};padding-left:1.25rem;">${x.id}</td>
+            <td>${x.at}</td><td>${x.bt}</td>
+            <td class="ct-val">${x.ct}</td>
+            <td>${tat}</td><td>${wt}</td>
         </tr>`;
+    }).join('');
+
+    document.getElementById('result').innerHTML = `
+    <thead><tr>
+        <th style="text-align:left;padding-left:1.25rem;">PID</th>
+        <th>Arrival</th><th>Burst</th><th>Completion</th><th>Turnaround</th><th>Waiting</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+        <td colspan="4" style="text-align:right;padding-right:1rem;color:var(--muted);font-size:0.78rem;">Averages →</td>
+        <td class="avg-val">${(atat/p.length).toFixed(2)}</td>
+        <td class="avg-val">${(awt/p.length).toFixed(2)}</td>
+    </tr></tfoot>`;
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = '✓ ' + msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function start() {
+    if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+
+    const algo = document.getElementById('algo').value;
+    const p = getProcesses();
+
+    const algoFns = {
+        'FCFS': fcfs, 'SJF': sjf, 'SRTF': srtf,
+        'Round Robin': rr, 'Priority NP': priority_np, 'Priority P': priority_p
+    };
+
+    // Compute entire schedule instantly (no visual delay in logic)
+    const ganttRaw = algoFns[algo](p);
+    const segments = compress(ganttRaw);
+
+    // Lock UI
+    const btn = document.getElementById('btnRun');
+    btn.disabled = true;
+    btn.textContent = '⏳ Simulating…';
+
+    // Hide old results while animating
+    document.getElementById('resultContainer').style.display = 'none';
+
+    // Start live Gantt reveal
+    animateGantt(segments, () => {
+        // Show results table after animation finishes
+        results(p);
+        btn.disabled = false;
+        btn.textContent = '▶ Run Simulation';
+        showToast(`${algo} complete`);
     });
-
-    table += `</tbody>
-    <tfoot class="bg-slate-50 font-bold">
-        <tr>
-            <td colspan="4" class="px-4 py-3 text-right">Average Metrics:</td>
-            <td class="px-4 py-3 text-blue-600">${(atat/p.length).toFixed(2)}</td>
-            <td class="px-4 py-3 text-blue-600">${(awt/p.length).toFixed(2)}</td>
-        </tr>
-    </tfoot>`;
-    document.getElementById("result").innerHTML = table;
 }
 
-// Keep your existing logic functions (fcfs, sjf, srtf, rr, priority_np, priority_p) 
-// but ensure they call the new draw() and results()
-function fcfs(p){ p.sort((a,b)=>a.at-b.at); let time=0, gantt=[]; for(let x of p){ if(time<x.at){ while(time<x.at){ gantt.push("Idle"); time++; } } for(let i=0;i<x.bt;i++){ gantt.push(x.id); time++; } x.ct=time; } draw(gantt); results(p); }
-function sjf(p){ let time=0, done=0, gantt=[]; while(done<p.length){ let available=p.filter(x=>x.at<=time && x.ct==0); if(available.length==0){ gantt.push("Idle"); time++; continue; } available.sort((a,b)=>a.bt-b.bt); let job=available[0]; for(let i=0;i<job.bt;i++){ gantt.push(job.id); time++; } job.ct=time; done++; } draw(gantt); results(p); }
-function srtf(p){ let time=0, done=0, gantt=[]; while(done<p.length){ let available=p.filter(x=>x.at<=time && x.rt>0); if(available.length==0){ gantt.push("Idle"); time++; continue; } available.sort((a,b)=>a.rt-b.rt); let job=available[0]; gantt.push(job.id); job.rt--; time++; if(job.rt==0){ job.ct=time; done++; } } draw(gantt); results(p); }
-function rr(p){ let tq=parseInt(document.getElementById("tq").value), time=0, gantt=[], done=false; while(!done){ done=true; for(let x of p){ if(x.rt>0 && x.at<=time){ done=false; let run=Math.min(tq,x.rt); for(let i=0;i<run;i++){ gantt.push(x.id); time++; } x.rt-=run; if(x.rt==0) x.ct=time; } } if(done && p.some(x=>x.rt>0)) { gantt.push("Idle"); time++; done=false; } } draw(gantt); results(p); }
-function priority_np(p){ let time=0, done=0, gantt=[]; while(done<p.length){ let available=p.filter(x=>x.at<=time && x.ct==0); if(available.length==0){ gantt.push("Idle"); time++; continue; } available.sort((a,b)=>a.pr-b.pr); let job=available[0]; for(let i=0;i<job.bt;i++){ gantt.push(job.id); time++; } job.ct=time; done++; } draw(gantt); results(p); }
-function priority_p(p){ let time=0, done=0, gantt=[]; while(done<p.length){ let available=p.filter(x=>x.at<=time && x.rt>0); if(available.length==0){ gantt.push("Idle"); time++; continue; } available.sort((a,b)=>a.pr-b.pr); let job=available[0]; gantt.push(job.id); job.rt--; time++; if(job.rt==0){ job.ct=time; done++; } } draw(gantt); results(p); }
-
-function resetSim(){
-    document.getElementById("gantt").innerHTML = "";
-    document.getElementById("timeline").innerHTML = "";
-    document.getElementById("result").innerHTML = "";
-    document.getElementById("resultContainer").classList.add('hidden');
+function resetSim() {
+    if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+    document.getElementById('gantt').innerHTML = '';
+    document.getElementById('timeline').innerHTML = '';
+    document.getElementById('result').innerHTML = '';
+    document.getElementById('resultContainer').style.display = 'none';
+    document.getElementById('ganttEmpty').style.display = 'block';
+    document.getElementById('liveStatus').style.display = 'none';
+    const btn = document.getElementById('btnRun');
+    btn.disabled = false;
+    btn.textContent = '▶ Run Simulation';
 }
+
+// Init
+createTable();
+toggleTQ();
 </script>
 </body>
 </html>
